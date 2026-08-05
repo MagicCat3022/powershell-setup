@@ -1,0 +1,100 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+# Blank line before each prompt so commands are visually separated.
+add_newline = true
+
+# Default is 500ms; slow modules silently render nothing when they time out.
+# 2000 because rustc on Windows regularly needs >1s on a cold start.
+command_timeout = 2000
+
+# Only the modules listed here run. Everything else is skipped entirely,
+# which is both the layout and the performance story.
+format = """
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$nodejs\
+$python\
+$rust\
+$dotnet\
+$line_break\
+$character"""
+
+# Right-aligned on the input line (the ❯ row), not the info line above.
+right_format = """$cmd_duration$time"""
+
+
+[directory]
+style = 'bold cyan'
+truncation_length = 5
+truncate_to_repo = true
+truncation_symbol = '…\'
+read_only = ' 󰌾'
+
+[git_branch]
+symbol = ' '
+style = 'bold purple'
+format = '[$symbol$branch]($style) '
+
+# Shows during rebase/merge/cherry-pick so you never lose track mid-operation.
+[git_state]
+style = 'bold yellow'
+format = '\([$state( $progress_current/$progress_total)]($style)\) '
+
+[git_status]
+style = 'bold red'
+format = '([\[$all_status$ahead_behind\]]($style) )'
+conflicted = '='
+ahead = '⇡${count}'
+behind = '⇣${count}'
+diverged = '⇕⇡${ahead_count}⇣${behind_count}'
+untracked = '?${count}'
+stashed = '\$${count}'
+modified = '!${count}'
+staged = '+${count}'
+renamed = '»${count}'
+deleted = '✘${count}'
+
+[cmd_duration]
+# 1000, not 500: starship rounds to whole seconds, so anything below 1s
+# renders as "0s". Enabling show_milliseconds fixes that but makes longer
+# runs ugly ("4s200ms", "1m5s0ms") — this keeps every duration clean.
+min_time = 1000
+style = 'bold yellow'
+format = '[󱎫 $duration]($style)'
+
+# Disabled by default; needs the explicit flag to appear at all.
+[time]
+disabled = false
+time_format = '%H:%M'
+style = 'dimmed white'
+format = '[  $time]($style)'
+
+[character]
+success_symbol = '[❯](bold green)'
+error_symbol = '[❯](bold red)'
+
+
+# ── Language modules ────────────────────────────────────────────────
+# Each appears only in a relevant directory (package.json, Cargo.toml, …).
+
+[nodejs]
+symbol = ' '
+style = 'bold green'
+format = '[$symbol($version )]($style)'
+
+[python]
+symbol = ' '
+style = 'bold yellow'
+format = '[$symbol($version )(\($virtualenv\) )]($style)'
+
+[rust]
+symbol = ' '
+style = 'bold red'
+format = '[$symbol($version )]($style)'
+
+[dotnet]
+symbol = ' '
+style = 'bold blue'
+format = '[$symbol($version )]($style)'
