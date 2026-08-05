@@ -432,9 +432,34 @@ function script:expandParamValues($cmd, $param, $filter) {
     $completions | ForEach-Object { -join ("--", $param, "=", $_) }
 }
 
+# LOCAL EDIT — commands whose completion needs working-tree/index state:
+# git add, rm, mv, reset, restore, diff, difftool, merge, mergetool, and the
+# `-- <path>` form of checkout/restore. Deliberately does NOT match a plain
+# `git checkout`/`git switch`, which complete refs and are the hot path.
+# Note the leading command: Expand-GitCommand receives the whole line, still
+# carrying its `git ` prefix — GitTabExpansionInternal is what strips it. Get-
+# AliasPattern is used so `g add` works for anyone aliasing git.
+$script:gitNeedsStatusPattern =
+    "^$(Get-AliasPattern git)\s+(?:add|rm|mv|stage|reset|restore|diff|difftool|merge|mergetool)\b|\s--\s"
+
 function Expand-GitCommand($Command) {
+    # LOCAL EDIT: upstream passes $Global:GitStatus, which posh-git populates
+    # from its own prompt function. Under a different prompt (starship, here)
+    # that variable is never set, so every file completion silently degraded to
+    # raw filesystem paths — `git add <TAB>` offered .git/ and unmodified
+    # files, and `git checkout -- <TAB>` offered branches instead of paths.
+    #
+    # Compute it on demand instead, but only for the commands that consume it:
+    # Get-GitStatus costs ~48ms, which would otherwise land on `git checkout`,
+    # the completion most worth keeping fast. Not cached — file state changes
+    # far more often than refs do, and a stale list here would be misleading.
+    $status = $Global:GitStatus
+    if (-not $status -and ($Command -match $script:gitNeedsStatusPattern)) {
+        $status = Get-GitStatus
+    }
+
     # Parse all Git output as UTF8, including tab completion output - https://github.com/dahlbyk/posh-git/pull/359
-    $res = Invoke-Utf8ConsoleCommand { GitTabExpansionInternal $Command $Global:GitStatus }
+    $res = Invoke-Utf8ConsoleCommand { GitTabExpansionInternal $Command $status }
     $res
 }
 

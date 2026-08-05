@@ -83,7 +83,7 @@ PowerToys manages and rewrites itself.
 
 ## The posh-git patches
 
-Upstream posh-git 1.1.0 is vendored here with three local changes, each marked
+Upstream posh-git 1.1.0 is vendored here with four local changes, each marked
 by a `LOCAL EDIT` comment block in the source. The first commit is pristine
 upstream and the second is the patch, so the diff is always recoverable:
 
@@ -142,6 +142,37 @@ Results are bucketed **prefix > substring > scattered**, alphabetical within
 each tier, so typing a prefix behaves exactly as it always did — new matches
 only ever appear below the old ones. Applied to tags and remote-unique branches
 too, so one Tab never mixes match semantics.
+
+### 4. File completion works under a non-posh-git prompt
+
+`Expand-GitCommand` passed `$Global:GitStatus` to the completer, but that
+variable is populated by **posh-git's own prompt function** — which starship
+replaces. It was therefore always `$null`, and every file completion silently
+degraded to raw filesystem paths:
+
+| `git add fi<TAB>` | |
+|---|---|
+| upstream, under starship | `.\file1.txt … .\file5.txt` — every file, plus `.git\` |
+| patched | `file1.txt, file2.txt, file3.txt` — only the modified ones |
+
+`git checkout -- <TAB>` was worse: it offered branch names instead of paths.
+
+The status is now computed on demand, but only for the commands that consume
+it — `add`, `rm`, `mv`, `reset`, `restore`, `diff`, `difftool`, `merge`,
+`mergetool`, and the `-- <path>` form. `Get-GitStatus` costs ~48ms, and a plain
+`git checkout` deliberately does **not** pay it:
+
+| | |
+|---|---|
+| `git checkout ma<TAB>` | 30ms — unchanged |
+| `git add fi<TAB>` | 55ms — up from 29ms, and now correct |
+
+Unlike the ref cache this result is **not** cached: working-tree state changes
+far more often than refs do, and a stale file list would actively mislead.
+
+> Only literal command names are matched, before posh-git expands aliases. If
+> you alias e.g. `a = add`, `git a <TAB>` falls back to filesystem completion.
+> Add the alias to `$script:gitNeedsStatusPattern` if that matters.
 
 ## Updating posh-git
 
