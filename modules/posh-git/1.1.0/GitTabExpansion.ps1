@@ -130,30 +130,156 @@ function script:gitRemotes($filter) {
         quoteStringWithSpecialChars
 }
 
+# ---------------------------------------------------------------------------
+# LOCAL EDIT — not upstream posh-git. Two changes to branch completion:
+#
+#   1. SPEED. Upstream spawned `git branch` AND `git branch -r` on every single
+#      Tab (~40ms each, subprocess spawn dominates), then parsed each line with
+#      a regex. Replaced with one `git for-each-ref`, whose output needs no
+#      parsing, plus a short-lived cache so repeated Tabs in the same directory
+#      cost nothing.
+#
+#   2. SUBSEQUENCE MATCHING. Upstream filtered with `-like "$filter*"`, i.e.
+#      prefix only. Now the filter's characters need only appear in order,
+#      left to right, anywhere in the name: "q124" matches "bq1124".
+#      Results are ranked so exact prefix matches still come first.
+#
+# A single `git checkout <TAB>` fans out to gitBranches + gitRemoteUniqueBranches
+# + gitTags (see the checkout case in Expand-GitCommand). Upstream that is FOUR
+# subprocesses per keypress. One for-each-ref now feeds all three.
+#
+# Cache staleness: a branch/tag created or fetched in another window may take up
+# to CacheSeconds to appear. Set $GitTabSettings.RefCacheSeconds = 0 to disable.
+# ---------------------------------------------------------------------------
+$script:gitRefCache = @{}
+
+function script:gitRefs() {
+    $ttl = $global:GitTabSettings.RefCacheSeconds
+    if ($null -eq $ttl) { $ttl = 3 }
+
+    $key = $PWD.ProviderPath
+    $now = [DateTime]::UtcNow
+    $hit = $script:gitRefCache[$key]
+    if ($ttl -gt 0 -and $hit -and (($now - $hit.Stamp).TotalSeconds -lt $ttl)) {
+        return $hit.Refs
+    }
+
+    # Full refname so the three categories can be split apart locally. No
+    # per-line regex is needed, and neither '(no branch)' nor the detached-HEAD
+    # line that `git branch` emits can appear here.
+    $heads   = [System.Collections.Generic.List[string]]::new()
+    $remotes = [System.Collections.Generic.List[string]]::new()
+    $tags    = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($r in @(git for-each-ref --format='%(refname)' refs/heads refs/remotes refs/tags 2>$null)) {
+        if ($r.StartsWith('refs/heads/',   [StringComparison]::Ordinal)) { $heads.Add($r.Substring(11));   continue }
+        if ($r.StartsWith('refs/remotes/', [StringComparison]::Ordinal)) { $remotes.Add($r.Substring(13)); continue }
+        if ($r.StartsWith('refs/tags/',    [StringComparison]::Ordinal)) { $tags.Add($r.Substring(10)) }
+    }
+
+    $refs = @{ Heads = $heads; Remotes = $remotes; Tags = $tags }
+
+    if ($ttl -gt 0) {
+        $script:gitRefCache[$key] = @{ Refs = $refs; Stamp = $now }
+    }
+    $refs
+}
+
+function script:gitBranchList() {
+    $r = gitRefs
+    $all = [System.Collections.Generic.List[string]]::new($r.Heads.Count + $r.Remotes.Count)
+    $all.AddRange($r.Heads)
+    $all.AddRange($r.Remotes)
+    # Unary comma: without it PowerShell unrolls the List into Object[] (or a
+    # bare String for a single ref), and callers lose .AddRange.
+    ,$all
+}
+
+# Shared matcher: subsequence filter + prefix-first ordering. Used for branches,
+# remote-unique branches and tags so a single Tab never mixes match semantics.
+function script:gitFilterRefs($candidates, [string]$filter) {
+    $exact   = [System.Collections.Generic.List[string]]::new()
+    $inside  = [System.Collections.Generic.List[string]]::new()
+    $scatter = [System.Collections.Generic.List[string]]::new()
+
+    $hasFilter = -not [string]::IsNullOrEmpty($filter)
+    $f = if ($hasFilter) { $filter.ToLowerInvariant() } else { '' }
+    $flen = $f.Length
+
+    foreach ($b in $candidates) {
+        if (-not $hasFilter) { $exact.Add($b); continue }
+
+        $c = $b.ToLowerInvariant()
+
+        # One IndexOf settles both prefix (0) and substring (>0) ranks.
+        $idx = $c.IndexOf($f, [StringComparison]::Ordinal)
+        if ($idx -eq 0) { $exact.Add($b);  continue }
+        if ($idx -gt 0) { $inside.Add($b); continue }
+
+        # Otherwise: do the filter's characters appear in order, left to
+        # right, anywhere in the name? ("q124" -> "bq1124")
+        $pos = 0
+        $ok = $true
+        for ($i = 0; $i -lt $flen; $i++) {
+            $pos = $c.IndexOf($f[$i], $pos)
+            if ($pos -lt 0) { $ok = $false; break }
+            $pos++
+        }
+        if ($ok) { $scatter.Add($b) }
+    }
+
+    $exact.Sort(); $inside.Sort(); $scatter.Sort()
+
+    $result = [System.Collections.Generic.List[string]]::new(
+        $exact.Count + $inside.Count + $scatter.Count)
+    $result.AddRange($exact)
+    $result.AddRange($inside)
+    $result.AddRange($scatter)
+    # Unary comma so callers can index/assign into the List (see gitBranches,
+    # gitTags) rather than receiving an unrolled Object[].
+    ,$result
+}
+
 function script:gitBranches($filter, $includeHEAD = $false, $prefix = '') {
     if ($filter -match "^(?<from>\S*\.{2,3})(?<to>.*)") {
         $prefix += $matches['from']
         $filter = $matches['to']
     }
 
-    $branches = @(git branch --no-color | ForEach-Object { if (($_ -notmatch "^\* \(HEAD detached .+\)$") -and ($_ -match "^[\*\+]?\s*(?<ref>\S+)(?: -> .+)?")) { $matches['ref'] } }) +
-                @(git branch --no-color -r | ForEach-Object { if ($_ -match "^  (?<ref>\S+)(?: -> .+)?") { $matches['ref'] } }) +
-                @(if ($includeHEAD) { 'HEAD','FETCH_HEAD','ORIG_HEAD','MERGE_HEAD' })
+    $branches = gitBranchList
+    if ($includeHEAD) {
+        $branches.AddRange([string[]]@('HEAD','FETCH_HEAD','ORIG_HEAD','MERGE_HEAD'))
+    }
 
-    $branches |
-        Where-Object { $_ -ne '(no branch)' -and $_ -like "$filter*" } |
-        ForEach-Object { $prefix + $_ } |
-        quoteStringWithSpecialChars
+    $result = gitFilterRefs $branches $filter
+
+    if ($prefix) {
+        for ($i = 0; $i -lt $result.Count; $i++) { $result[$i] = $prefix + $result[$i] }
+    }
+
+    $result | quoteStringWithSpecialChars
 }
 
 function script:gitRemoteUniqueBranches($filter) {
-    git branch --no-color -r |
-        ForEach-Object { if ($_ -match "^  (?<remote>[^/]+)/(?<branch>\S+)(?! -> .+)?$") { $matches['branch'] } } |
-        Group-Object -NoElement |
-        Where-Object { $_.Count -eq 1 } |
-        Select-Object -ExpandProperty Name |
-        Where-Object { $_ -like "$filter*" } |
-        quoteStringWithSpecialChars
+    # LOCAL EDIT: reads the shared ref cache instead of spawning `git branch -r`,
+    # and uses the same subsequence matcher as gitBranches.
+    $seen = @{}
+    foreach ($r in (gitRefs).Remotes) {
+        # 'origin/feature/x' -> 'feature/x'; skip the bare 'origin/HEAD' symref.
+        $slash = $r.IndexOf('/')
+        if ($slash -lt 0) { continue }
+        $branch = $r.Substring($slash + 1)
+        if ($branch -eq 'HEAD') { continue }
+
+        if ($seen.ContainsKey($branch)) { $seen[$branch]++ } else { $seen[$branch] = 1 }
+    }
+
+    $unique = [System.Collections.Generic.List[string]]::new()
+    foreach ($kv in $seen.GetEnumerator()) {
+        if ($kv.Value -eq 1) { $unique.Add($kv.Key) }
+    }
+
+    gitFilterRefs $unique $filter | quoteStringWithSpecialChars
 }
 
 function script:gitConfigKeys($section, $filter, $defaultOptions = '') {
@@ -169,10 +295,15 @@ function script:gitConfigKeys($section, $filter, $defaultOptions = '') {
 }
 
 function script:gitTags($filter, $prefix = '') {
-    git tag |
-        Where-Object { $_ -like "$filter*" } |
-        ForEach-Object { $prefix + $_ } |
-        quoteStringWithSpecialChars
+    # LOCAL EDIT: reads the shared ref cache instead of spawning `git tag`, and
+    # uses the same subsequence matcher so one Tab doesn't mix match semantics.
+    $result = gitFilterRefs (gitRefs).Tags $filter
+
+    if ($prefix) {
+        for ($i = 0; $i -lt $result.Count; $i++) { $result[$i] = $prefix + $result[$i] }
+    }
+
+    $result | quoteStringWithSpecialChars
 }
 
 function script:gitFeatures($filter, $command) {
