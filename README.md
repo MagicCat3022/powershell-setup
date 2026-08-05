@@ -17,14 +17,56 @@ first use — no SSH key or `ssh-agent` needed. The install path above is only a
 convention; `install.ps1` resolves its own location, so the repo works from
 anywhere you clone it.
 
-`install.ps1` is idempotent — re-run it after every `git pull`. It checks
-prerequisites, junctions `modules\posh-git` into the user module path, and
-appends a dot-source stub to `$PROFILE`.
+`install.ps1` is idempotent — re-run it after every `git pull`.
 
-Prerequisites: PowerShell 7+, git, and
-[starship](https://starship.rs) (`winget install Starship.Starship`).
-A Nerd Font is required for the prompt's icons — this setup was built against
-`DroidSansM Nerd Font Mono`, set as the Windows Terminal default font.
+## Prerequisites
+
+Two are **bootstrap** requirements the script cannot install for you, for
+circular reasons — you are already running PowerShell, and git is how you got
+this repo:
+
+| | install with |
+|---|---|
+| PowerShell 7+ | `winget install Microsoft.PowerShell` |
+| git | `winget install Git.Git` |
+
+Everything else `install.ps1` installs itself if missing, all per-user, with
+**no administrator rights required**:
+
+| | how | why |
+|---|---|---|
+| [starship](https://starship.rs) | `winget` | the prompt |
+| PSReadLine 2.2+ | PSGallery | `PredictionSource` needs 2.2; older versions throw and predictions end up silently dead |
+| `DroidSansM Nerd Font Mono` | Nerd Fonts GitHub release | the prompt's git/language icons render as tofu boxes without it |
+| Windows Terminal font | patches `settings.json` | installing the font achieves nothing visible until something selects it |
+
+Pass `-SkipPrereqs` to only link the module and wire `$PROFILE`; missing
+prerequisites are still reported.
+
+### Why the font doesn't come from winget
+
+winget carries exactly one Nerd Font — JetBrainsMono
+(`DEVCOM.JetBrainsMonoNerdFont`) — and not DroidSansMono. So the font is pulled
+from the [Nerd Fonts releases](https://github.com/ryanoasis/nerd-fonts/releases)
+and installed per-user: files into `%LOCALAPPDATA%\Microsoft\Windows\Fonts`,
+registered under `HKCU`. The family name is read out of each font file rather
+than guessed from its filename, because the registry entry has to match what
+Windows and Windows Terminal call the font.
+
+To use a different font, pass **both** parameters — they have to agree:
+
+```powershell
+.\install.ps1 -NerdFont JetBrainsMono -NerdFontFamily 'JetBrainsMono Nerd Font Mono'
+```
+
+### Windows Terminal font caveat
+
+`settings.json` is JSONC and hand-editable, so it is patched textually —
+round-tripping it through `ConvertTo-Json` would strip every comment. Only the
+unambiguous empty-`"defaults": {}` shape is rewritten. If you already have
+profile defaults, the script tells you to set the font yourself rather than
+risk a regex matching some other profile's font. The file is backed up
+alongside itself before any edit.
 
 ## Layout
 
