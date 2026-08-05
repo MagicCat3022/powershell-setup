@@ -7,9 +7,15 @@ terminal.
 ## Install on a new machine
 
 ```powershell
-git clone <this-repo> $HOME\Documents\Github\powershell-setup
+git clone https://github.com/MagicCat3022/powershell-setup.git $HOME\Documents\Github\powershell-setup
 & $HOME\Documents\Github\powershell-setup\install.ps1
 ```
+
+This repo is private, so the clone authenticates. On a machine with Git for
+Windows the bundled Git Credential Manager handles it via a browser sign-in on
+first use — no SSH key or `ssh-agent` needed. The install path above is only a
+convention; `install.ps1` resolves its own location, so the repo works from
+anywhere you clone it.
 
 `install.ps1` is idempotent — re-run it after every `git pull`. It checks
 prerequisites, junctions `modules\posh-git` into the user module path, and
@@ -41,8 +47,13 @@ upstream and the second is the patch, so the diff is always recoverable:
 
 ```powershell
 git log --oneline -- modules/posh-git
-git diff <pristine-commit> <patch-commit> -- modules/posh-git
+git diff 2ab92ed e591b69 -- modules/posh-git   # the patch, in isolation
 ```
+
+| commit | contents |
+|---|---|
+| `2ab92ed` | posh-git 1.1.0 exactly as PSGallery ships it |
+| `e591b69` | the three local patches, and nothing else |
 
 ### 1. No `git --version` subprocess at import
 
@@ -97,8 +108,11 @@ To move to a new upstream release:
 
 1. `Save-Module posh-git -Path <tmp> -RequiredVersion <new>`
 2. Commit that pristine tree over `modules/posh-git/`.
-3. Re-apply the patch: `git cherry-pick <patch-commit>`, or diff the old pair
-   and port the `LOCAL EDIT` blocks by hand.
+3. Re-apply the patch: `git cherry-pick e591b69`, or port the `LOCAL EDIT`
+   blocks by hand if upstream has moved the surrounding code far enough that
+   the cherry-pick conflicts.
+4. Re-run `install.ps1` on each machine (it is idempotent), then confirm
+   completion still works — `git checkout <TAB>` in a repo with branches.
 
 ### Gotcha worth remembering
 
