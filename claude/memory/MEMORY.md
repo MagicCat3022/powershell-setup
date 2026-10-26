@@ -1,0 +1,2 @@
+- [Small guard rides in the ticket](small-guard-rides-in-ticket.md) — a small guard on the ticket's own flow goes in the ticket commit, no separate bug
+- [Session answers stay out of skills](session-answers-stay-out-of-skills.md) — a decision answer applies to the task; never write it into a skill unasked

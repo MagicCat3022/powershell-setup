@@ -1,0 +1,19 @@
+{
+  "skillsCli": [
+    {
+      "name": "cocoindex",
+      "source": "cocoindex-io/cocoindex"
+    }
+  ],
+  "mcpServers": {
+    "brave-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "brave-mcp@latest"
+      ],
+      "env": {}
+    }
+  }
+}

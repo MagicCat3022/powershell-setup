@@ -75,6 +75,8 @@ install.ps1              wires the repo into the current machine
 profile/profile.ps1      the portable profile, dot-sourced from $PROFILE
 starship/starship.toml   prompt config (loaded via $env:STARSHIP_CONFIG)
 modules/posh-git/1.1.0/  posh-git 1.1.0 with local patches
+install-claude.ps1       installs or exports the Claude Code setup
+claude/                  the Claude Code setup (see "Claude Code" below)
 ```
 
 Machine-specific settings deliberately stay **out** of this repo and remain in
@@ -193,6 +195,54 @@ Functions returning `List[string]` must use the unary-comma idiom (`,$list`).
 Without it PowerShell unrolls the List into `Object[]` — or a bare `String`
 when it holds one element — and callers lose `.AddRange`. This silently
 empties every completion rather than raising anything obvious.
+
+## Claude Code
+
+`claude/` holds a generic Claude Code setup: the global rules (`CLAUDE.md`),
+settings, the status line script, the git push guard hook, agents, skills, and
+feedback memories. Nothing in it names a company, a repo, or a host.
+`install-claude.ps1` copies it in either direction.
+
+```powershell
+.\install-claude.ps1           # repo -> this machine
+.\install-claude.ps1 -Export   # this machine -> repo
+```
+
+| | |
+|---|---|
+| `CLAUDE.md`, `settings.json`, `statusline-command.ps1`, `hooks/`, `agents/` | `~/.claude` |
+| `skills/<name>/` | `~/.claude/skills`. Export takes every real folder there except `synced` and dot-folders. |
+| `memory/` | the `~/Work` project memory. Export takes the `type: feedback` memories. Install adds index lines to `MEMORY.md` by file name. |
+| `repo-settings/<repo>/` | `~/Work/<repo>/.claude/settings.local.json`, for repos that are cloned. Export creates one for each repo with local settings. |
+| `external.json` | skills-CLI skills and user MCP servers, installed by name |
+
+- Install installs the plugins set to `true` in `enabledPlugins` in `settings.json`,
+  and adds the marketplaces in `extraKnownMarketplaces`.
+- Install never deletes. It copies each file it changes to
+  `~/.claude/backups/powershell-setup-<timestamp>/` first.
+- Export mirrors the machine. A skill, agent, or memory deleted locally is
+  deleted from `claude/`.
+- Home paths are stored as `{{HOME}}` (`C:/Users/<name>`) and `{{HOME_JSON}}`
+  (`C:\\Users\\<name>`).
+- Prerequisites: Claude Code (`claude`), Node.js (`npx`, for skills-CLI skills),
+  and Python (for the git push guard hook).
+- To test an install without touching the live setup, run
+  `.\install-claude.ps1 -ClaudeDir <empty folder> -WorkDir <empty folder> -SkipExternal`.
+
+On a machine whose `~/.claude` holds company-specific rules or skills:
+
+- Export copies them into `claude/`, company content included. Run export only
+  on a machine with the generic setup, and review the diff before committing.
+- Install replaces that machine's `CLAUDE.md` and `settings.json` with the
+  generic ones. The originals go to the backup folder. Skills with other names
+  stay.
+
+Not included: credentials, `~/.claude.json` (session state), the skills synced
+from claude.ai (they follow the account), and project and reference memories
+(ticket state).
+
+The semantic search section of `CLAUDE.md` uses a CocoIndex project at
+`~/Work/code-index`, which lives outside this repo.
 
 ## Keyboard
 
