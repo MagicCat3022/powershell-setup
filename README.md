@@ -11,9 +11,9 @@ git clone https://github.com/MagicCat3022/powershell-setup.git $HOME\Documents\G
 & $HOME\Documents\Github\powershell-setup\install.ps1
 ```
 
-This repo is private, so the clone authenticates. On a machine with Git for
-Windows the bundled Git Credential Manager handles it via a browser sign-in on
-first use — no SSH key or `ssh-agent` needed. The install path above is only a
+This repo is public, so the clone needs no sign-in. A push authenticates through
+the Git Credential Manager bundled with Git for Windows, with a browser sign-in
+on first use — no SSH key or `ssh-agent` needed. The install path above is only a
 convention; `install.ps1` resolves its own location, so the repo works from
 anywhere you clone it.
 
