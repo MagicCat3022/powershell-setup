@@ -22,6 +22,25 @@ test names.
 The reader of a log, a diff, or a review thread has no tone of voice to decode, and a negated
 claim about correctness is exactly the sentence a reviewer must not misread.
 
+## File links in replies
+
+In a chat reply, every mention of a file or folder path is a markdown link that opens it in VS
+Code. The visible text stays short and readable; the target is a `vscode://` URL built from the
+absolute path.
+
+- **Windows files:** `vscode://file/{{HOME}}/Documents/Github/repo/src/app.ts`. Forward
+  slashes, drive letter kept.
+- **WSL files:** `vscode://vscode-remote/wsl+Ubuntu/home/magic/Github/repo/src/app.ts`.
+- **A line or column:** append `:<line>` or `:<line>:<column>` to the URL, and show the line in
+  the text: [src/app.ts:42](vscode://file/{{HOME}}/Documents/Github/repo/src/app.ts:42).
+- **Link text:** the repo-relative path, or the file name when the repo is clear. Never the full
+  URL.
+- **Special characters:** percent-encode spaces as `%20`, and `#`, `?`, `(`, `)` too, so the
+  markdown link does not break.
+- **Scope:** chat replies only. Commit messages, PR descriptions, code comments, docs, and review
+  comments posted to GitHub use plain paths, since a `vscode://` link there opens nothing for
+  other readers. A path inside a code block or a shell command also stays plain.
+
 ## Working
 
 - **Check history before asking.** Before asking why a change exists or who asked for it, look

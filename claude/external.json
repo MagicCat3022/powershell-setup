@@ -1,17 +1,131 @@
 {
-  "skillsCli": [
+  "skillsCli": [],
+  "skillshare": [
     {
-      "name": "cocoindex",
-      "source": "cocoindex-io/cocoindex"
+      "name": "animate",
+      "source": "github.com/emilkowalski/skills/skills/animate"
+    },
+    {
+      "name": "animation-performance",
+      "source": "github.com/emilkowalski/skills/skills/animation-performance"
+    },
+    {
+      "name": "animation-vocabulary",
+      "source": "github.com/emilkowalski/skills/skills/animation-vocabulary"
+    },
+    {
+      "name": "apple-design",
+      "source": "github.com/emilkowalski/skills/skills/apple-design"
+    },
+    {
+      "name": "ask-sonner",
+      "source": "github.com/emilkowalski/skills/skills/ask-sonner"
+    },
+    {
+      "name": "break-ui",
+      "source": "github.com/emilkowalski/skills/skills/break-ui"
+    },
+    {
+      "name": "capture-tasks-from-meeting-notes",
+      "source": "github.com/atlassian/atlassian-mcp-server/skills/capture-tasks-from-meeting-notes"
+    },
+    {
+      "name": "ccc",
+      "source": "github.com/cocoindex-io/cocoindex-code/skills/ccc"
+    },
+    {
+      "name": "choreograph",
+      "source": "github.com/emilkowalski/skills/skills/choreograph"
+    },
+    {
+      "name": "emil-design-eng",
+      "source": "github.com/emilkowalski/skills/skills/emil-design-eng"
+    },
+    {
+      "name": "find-animation-opportunities",
+      "source": "github.com/emilkowalski/skills/skills/find-animation-opportunities"
+    },
+    {
+      "name": "find-skills",
+      "source": "github.com/vercel-labs/skills/skills/find-skills"
+    },
+    {
+      "name": "frontend-design",
+      "source": "github.com/anthropics/skills/skills/frontend-design"
+    },
+    {
+      "name": "generate-status-report",
+      "source": "github.com/atlassian/atlassian-mcp-server/skills/generate-status-report"
+    },
+    {
+      "name": "improve-animations",
+      "source": "github.com/emilkowalski/skills/skills/improve-animations"
+    },
+    {
+      "name": "jira-sprint-dashboard",
+      "source": "github.com/atlassian/atlassian-mcp-server/skills/jira-sprint-dashboard"
+    },
+    {
+      "name": "mobile-native",
+      "source": "github.com/emilkowalski/skills/skills/mobile-native"
+    },
+    {
+      "name": "pick-ui-library",
+      "source": "github.com/emilkowalski/skills/skills/pick-ui-library"
+    },
+    {
+      "name": "remove-animations",
+      "source": "github.com/emilkowalski/skills/skills/remove-animations"
+    },
+    {
+      "name": "review-animations",
+      "source": "github.com/emilkowalski/skills/skills/review-animations"
+    },
+    {
+      "name": "search-company-knowledge",
+      "source": "github.com/atlassian/atlassian-mcp-server/skills/search-company-knowledge"
+    },
+    {
+      "name": "skillshare",
+      "source": "github.com/runkids/skillshare/skills/skillshare"
+    },
+    {
+      "name": "spec-to-backlog",
+      "source": "github.com/atlassian/atlassian-mcp-server/skills/spec-to-backlog"
+    },
+    {
+      "name": "triage-issue",
+      "source": "github.com/atlassian/atlassian-mcp-server/skills/triage-issue"
+    },
+    {
+      "name": "vercel-react-best-practices",
+      "source": "github.com/vercel-labs/agent-skills/skills/react-best-practices"
     }
   ],
   "mcpServers": {
+    "atlassian": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v2/mcp"
+    },
     "brave-devtools": {
       "type": "stdio",
       "command": "npx",
       "args": [
         "-y",
         "brave-mcp@latest"
+      ],
+      "env": {}
+    },
+    "ms365": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@softeria/ms-365-mcp-server",
+        "--org-mode",
+        "--read-only"
       ],
       "env": {}
     }

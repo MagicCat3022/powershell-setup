@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deadlock Skins"
+  short_description: "Build, test, package and add Deadlock character skins"
+  default_prompt: "Use $deadlock-skins to build or add a Deadlock skin while preserving its source proportions and gameplay behavior."

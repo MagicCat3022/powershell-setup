@@ -1,0 +1,4 @@
+interface:
+  display_name: "Adversarial PR Review"
+  short_description: "Evidence-driven PR review with lasting lessons"
+  default_prompt: "Use $adversarial-pr-review to review the newest open PR, try to break the changed behavior, and assess whether it is safe to merge."

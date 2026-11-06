@@ -213,10 +213,10 @@ feedback memories. Nothing in it names a company, a repo, or a host.
 | | |
 |---|---|
 | `CLAUDE.md`, `settings.json`, `statusline-command.ps1`, `hooks/`, `agents/` | `~/.claude` |
-| `skills/<name>/` | `~/.claude/skills`. Export takes every real folder there except `synced` and dot-folders. |
+| `skills/<name>/` | own skills: the skillshare source folder when skillshare is set up, else `~/.claude/skills`. Export takes every real folder there except `synced`, dot-folders, and skills installed from a remote source. |
 | `memory/` | the work folder's project memory. Export takes the `type: feedback` memories. Install adds index lines to `MEMORY.md` by file name. |
 | `repo-settings/<repo>/` | `<work folder>/<repo>/.claude/settings.local.json`, for repos that are cloned. Export creates one for each repo with local settings. |
-| `external.json` | skills-CLI skills and user MCP servers, installed by name |
+| `external.json` | skills-CLI skills, skillshare skills (by source), and user MCP servers. Install adds what is missing and replaces a user MCP server whose definition differs, keeping the old one in the backup folder under `mcp/`. |
 
 - Install installs the plugins set to `true` in `enabledPlugins` in `settings.json`,
   and adds the marketplaces in `extraKnownMarketplaces`.
@@ -233,8 +233,15 @@ feedback memories. Nothing in it names a company, a repo, or a host.
   that machine's `settings.json` enables.
 - `-SkipClaudeMd` leaves `CLAUDE.md` alone on the machine and in the repo, for a
   machine that keeps its own global rules.
+- When skillshare is set up, install runs `skillshare sync` last, which links
+  the skills into every skillshare target.
+- `-Skills` and `-ExcludeSkills` take skill names, wildcards allowed, and
+  apply to own, skills-CLI, and skillshare skills. Install installs only the
+  selected skills. Export keeps only the selected skills in `claude/`:
+  `.\install-claude.ps1 -Export -ExcludeSkills deadlock-skins` drops that
+  skill from the repo.
 - Prerequisites: Claude Code (`claude`), Node.js (`npx`, for skills-CLI skills),
-  and Python (for the git push guard hook).
+  skillshare (for skillshare skills), and Python (for the git push guard hook).
 - To test an install without touching the live setup, run
   `.\install-claude.ps1 -ClaudeDir <empty folder> -WorkDir <empty folder> -SkipExternal`.
 

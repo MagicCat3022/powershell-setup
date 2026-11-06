@@ -7,13 +7,16 @@
     Idempotent — safe to re-run after `git pull`. Install, the default:
 
       1. Copies CLAUDE.md, settings.json, the status line script, hooks,
-         agents, and skills from <repo>\claude into the Claude Code directory.
+         agents, and own skills from <repo>\claude into the Claude Code
+         directory. Own skills go to the skillshare source folder when
+         skillshare manages ~/.claude/skills.
       2. Copies the feedback memories into the Work folder's project memory and
          adds their lines to its MEMORY.md.
       3. Copies each repo's local Claude settings into <WorkDir>\<repo>\.claude,
          for the repos that exist.
       4. Adds the plugin marketplaces, installs the enabled plugins, installs
-         the skills-CLI skills, and adds the user MCP servers.
+         the skills-CLI and skillshare skills, and adds the user MCP servers.
+         Skillshare then links its skills into its targets.
 
     -Export runs steps 1 to 3 from the machine into the repo, and rewrites
     claude\external.json, the list step 4 installs from. It copies whatever
@@ -54,8 +57,17 @@
     keeps its own global rules.
 
 .PARAMETER SkipExternal
-    Skip step 4. Plugins, skills-CLI skills, and MCP servers always install
-    into the real user profile, whatever -ClaudeDir says.
+    Skip step 4. Plugins, skills-CLI skills, skillshare skills, and MCP
+    servers always install into the real user profile, whatever -ClaudeDir
+    says. An explicit -ClaudeDir keeps own skills in <ClaudeDir>\skills.
+
+.PARAMETER Skills
+    Names of the skills to install or export, wildcards allowed. Defaults to
+    every skill. Applies to own, skills-CLI, and skillshare skills. Export
+    mirrors the selection: the repo keeps only the selected skills.
+
+.PARAMETER ExcludeSkills
+    Names of skills to leave out, wildcards allowed. Applied after -Skills.
 #>
 [CmdletBinding()]
 param(
@@ -65,13 +77,35 @@ param(
                            else { Join-Path $HOME 'Documents\Github' }),
     [switch]$SkipSettings,
     [switch]$SkipClaudeMd,
-    [switch]$SkipExternal
+    [switch]$SkipExternal,
+    [string[]]$Skills = @('*'),
+    [string[]]$ExcludeSkills = @()
 )
 
 $ErrorActionPreference = 'Stop'
 $store     = Join-Path $PSScriptRoot 'claude'
 $ClaudeDir = [IO.Path]::GetFullPath($ClaudeDir).TrimEnd('\')
 $WorkDir   = [IO.Path]::GetFullPath($WorkDir).TrimEnd('\')
+
+function Test-SkillSelected([string]$name) {
+    @($Skills | Where-Object { $name -like $_ }).Count -and
+        -not @($ExcludeSkills | Where-Object { $name -like $_ }).Count
+}
+
+# Skillshare keeps skills in its source folder and links them into its targets.
+# The first `skills:` key with a value in config.yaml is sources.skills.
+$ssConfig = Join-Path $env:APPDATA 'skillshare\config.yaml'
+$ssSource = if (Test-Path -LiteralPath $ssConfig) {
+    $hit = Select-String -LiteralPath $ssConfig -Pattern '^\s+skills:\s*(\S.*)$' | Select-Object -First 1
+    if ($hit) { $hit.Matches[0].Groups[1].Value.Trim().Trim('"', "'") }
+}
+$useSkillshare = $ssSource -and (Test-Path -LiteralPath $ssSource) -and
+                 -not $PSBoundParameters.ContainsKey('ClaudeDir')
+$skillsDir = if ($useSkillshare) { [IO.Path]::GetFullPath($ssSource).TrimEnd('\', '/') } else { Join-Path $ClaudeDir 'skills' }
+$ssMetaFile = if ($useSkillshare) { Join-Path $ssSource '.metadata.json' }
+$ssEntries = if ($ssMetaFile -and (Test-Path -LiteralPath $ssMetaFile)) {
+    (Get-Content -LiteralPath $ssMetaFile -Raw | ConvertFrom-Json -AsHashtable).entries
+} else { @{} }
 
 function Write-Step($msg)  { Write-Host "  $msg" }
 function Write-Ok($msg)    { Write-Host "  [ok]    $msg" -ForegroundColor Green }
@@ -135,6 +169,8 @@ function Backup-File([string]$path) {
     $full = [IO.Path]::GetFullPath($path)
     $rel  = if ($full.StartsWith("$ClaudeDir\", 'OrdinalIgnoreCase')) {
         [IO.Path]::GetRelativePath($ClaudeDir, $full)
+    } elseif ($useSkillshare -and $full.StartsWith("$skillsDir\", 'OrdinalIgnoreCase')) {
+        Join-Path 'skillshare-skills' ([IO.Path]::GetRelativePath($skillsDir, $full))
     } else {
         Join-Path 'work' ([IO.Path]::GetRelativePath($WorkDir, $full))
     }
@@ -169,7 +205,10 @@ function Copy-Managed([string]$src, [string]$dst) {
 function Get-ManagedFiles([string]$dir) {
     if (-not (Test-Path -LiteralPath $dir)) { return @() }
     Get-ChildItem -LiteralPath $dir -Recurse -File -Force |
-        Where-Object { $_.FullName -notmatch '\\(__pycache__|node_modules)\\' -and $_.Extension -ne '.pyc' }
+        Where-Object {
+            $_.FullName -notmatch '\\(__pycache__|node_modules)\\' -and $_.Extension -ne '.pyc' -and
+            $_.Name -ne '.skillshare-manifest.json'
+        }
 }
 
 function Write-Result([string]$label, [hashtable]$n) {
@@ -247,25 +286,27 @@ foreach ($name in 'hooks', 'agents') {
 
 Write-Step "`nSkills..."
 
-# Own skills are the real folders in skills\. Skills-CLI skills, linked or
-# copied, are listed in its lock file and reinstall through external.json;
-# synced\ follows the claude.ai account.
+# Own skills are the real folders in the skills folder. Skills installed from
+# a remote source, by the skills CLI or skillshare, reinstall through
+# external.json; synced\ follows the claude.ai account.
 $lockFile = Join-Path $HOME '.agents\.skill-lock.json'
 $cliSkills = if (Test-Path -LiteralPath $lockFile) {
     @((Get-Content -LiteralPath $lockFile -Raw | ConvertFrom-Json -AsHashtable).skills.Keys)
 } else { @() }
+$remoteSkills = @($cliSkills) + @($ssEntries.Keys)
 $skillNames = if ($Export) {
-    Get-ChildItem -LiteralPath (Join-Path $ClaudeDir 'skills') -Directory -Force |
+    Get-ChildItem -LiteralPath $skillsDir -Directory -Force |
         Where-Object {
             -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
             $_.Name -ne 'synced' -and -not $_.Name.StartsWith('.') -and
-            $cliSkills -notcontains $_.Name
+            $remoteSkills -notcontains $_.Name
         } |
         ForEach-Object Name
 } else {
     Get-ChildItem -LiteralPath (Join-Path $store 'skills') -Directory | ForEach-Object Name
 }
-Sync-Folders (Join-Path $ClaudeDir 'skills') (Join-Path $store 'skills') $skillNames 'skill'
+$skillNames = @($skillNames | Where-Object { Test-SkillSelected $_ })
+Sync-Folders $skillsDir (Join-Path $store 'skills') $skillNames 'skill'
 
 # ── 2. feedback memories ────────────────────────────────────────────────────
 Write-Step "`nFeedback memories ($memDir)..."
@@ -357,7 +398,7 @@ else {
     }
 }
 
-# ── 4. plugins, skills-CLI skills, MCP servers ──────────────────────────────
+# ── 4. plugins, skills-CLI and skillshare skills, MCP servers ───────────────
 $externalFile = Join-Path $store 'external.json'
 
 if ($Export) {
@@ -365,7 +406,7 @@ if ($Export) {
     $skillsCli = @()
     if (Test-Path -LiteralPath $lockFile) {
         $lock = Get-Content -LiteralPath $lockFile -Raw | ConvertFrom-Json -AsHashtable
-        foreach ($k in $lock.skills.Keys | Sort-Object) {
+        foreach ($k in $lock.skills.Keys | Where-Object { Test-SkillSelected $_ } | Sort-Object) {
             $skillsCli += [ordered]@{ name = $k; source = $lock.skills[$k].source }
         }
     }
@@ -375,17 +416,21 @@ if ($Export) {
         $servers = (Get-Content -LiteralPath $configFile -Raw | ConvertFrom-Json -AsHashtable).mcpServers
         if ($servers) { foreach ($k in $servers.Keys | Sort-Object) { $mcp[$k] = $servers[$k] } }
     }
-    $json  = ([ordered]@{ skillsCli = $skillsCli; mcpServers = $mcp } | ConvertTo-Json -Depth 10) -replace "`r`n", "`n"
+    $skillshare = @($ssEntries.Keys | Where-Object { Test-SkillSelected $_ } | Sort-Object | ForEach-Object {
+        [ordered]@{ name = $_; source = $ssEntries[$_].source }
+    })
+    $json  = ([ordered]@{ skillsCli = $skillsCli; skillshare = $skillshare; mcpServers = $mcp } |
+              ConvertTo-Json -Depth 10) -replace "`r`n", "`n"
     $state = Write-Managed $externalFile (Convert-Content $utf8.GetBytes($json + "`n"))
-    $summary = "external.json: $($skillsCli.Count) skills-CLI skills, $($mcp.Count) MCP servers"
+    $summary = "external.json: $($skillsCli.Count) skills-CLI skills, $($skillshare.Count) skillshare skills, $($mcp.Count) MCP servers"
     if ($state -eq 'same') { Write-Ok $summary } else { Write-Add "$summary ($state)" }
 }
 elseif ($SkipExternal) {
-    Write-Step "`nPlugins, skills-CLI skills, MCP servers (-SkipExternal, skipped)."
+    Write-Step "`nPlugins, skills-CLI and skillshare skills, MCP servers (-SkipExternal, skipped)."
 }
 elseif (-not (Get-Command claude -ErrorAction SilentlyContinue)) {
     Write-Host ''
-    Write-Warn2 'claude not on PATH — plugins, skills-CLI skills, and MCP servers skipped.'
+    Write-Warn2 'claude not on PATH — plugins, skills-CLI and skillshare skills, and MCP servers skipped.'
     Write-Warn2 'Install Claude Code, then re-run this script.'
 }
 else {
@@ -415,7 +460,7 @@ else {
 
     Write-Step "`nSkills-CLI skills..."
     $hasNpx = [bool](Get-Command npx -ErrorAction SilentlyContinue)
-    foreach ($s in $external.skillsCli) {
+    foreach ($s in @($external.skillsCli | Where-Object { $_ -and (Test-SkillSelected $_.name) })) {
         if (Test-Path -LiteralPath (Join-Path $HOME ".claude\skills\$($s.name)")) { Write-Ok $s.name; continue }
         if (-not $hasNpx) { Write-Warn2 "$($s.name) missing — npx not on PATH. Install Node.js, then re-run."; continue }
         # -a claude-code: without it the CLI links the skill into every agent it knows.
@@ -423,13 +468,68 @@ else {
         if ($LASTEXITCODE -eq 0) { Write-Add $s.name } else { Write-Warn2 "$($s.name) failed (exit $LASTEXITCODE)" }
     }
 
+    Write-Step "`nSkillshare skills..."
+    $hasSkillshare = [bool](Get-Command skillshare -ErrorAction SilentlyContinue)
+    foreach ($s in @($external.skillshare | Where-Object { $_ -and (Test-SkillSelected $_.name) })) {
+        $present = (Test-Path -LiteralPath (Join-Path $HOME ".claude\skills\$($s.name)")) -or
+                   ($ssSource -and (Test-Path -LiteralPath (Join-Path $ssSource $s.name)))
+        if ($present) { Write-Ok $s.name; continue }
+        if (-not $hasSkillshare) { Write-Warn2 "$($s.name) missing — skillshare not on PATH. Install skillshare, then re-run."; continue }
+        # --name: the default name is the source folder, which can differ from the recorded name.
+        skillshare install $s.source --name $s.name -y
+        if ($LASTEXITCODE -eq 0) { Write-Add $s.name } else { Write-Warn2 "$($s.name) failed (exit $LASTEXITCODE)" }
+    }
+
     Write-Step "`nMCP servers..."
+    # Key order differs between the manifest and ~/.claude.json, so both sides
+    # are compared with keys sorted at every level.
+    function ConvertTo-SortedJson($value) {
+        $sort = {
+            param($v)
+            if ($v -is [Collections.IDictionary]) {
+                $o = [ordered]@{}
+                foreach ($k in $v.Keys | Sort-Object) { $o[$k] = & $sort $v[$k] }
+                $o
+            } elseif ($v -is [Collections.IList]) {
+                , @($v | ForEach-Object { & $sort $_ })
+            } else { $v }
+        }
+        (& $sort $value) | ConvertTo-Json -Depth 10 -Compress
+    }
+    $userConfig = Join-Path $HOME '.claude.json'
+    $userServers = if (Test-Path -LiteralPath $userConfig) {
+        (Get-Content -LiteralPath $userConfig -Raw | ConvertFrom-Json -AsHashtable).mcpServers
+    }
+    if (-not $userServers) { $userServers = @{} }
     foreach ($name in @($external.mcpServers.Keys)) {
+        $want = $external.mcpServers[$name] | ConvertTo-Json -Depth 10 -Compress
+        if ($userServers.Contains($name)) {
+            if ((ConvertTo-SortedJson $userServers[$name]) -eq (ConvertTo-SortedJson $external.mcpServers[$name])) {
+                Write-Ok $name; continue
+            }
+            # The old user definition is kept beside the file backups.
+            $old = Join-Path $backupRoot "mcp\$name.json"
+            New-Item -ItemType Directory -Force -Path (Split-Path $old -Parent) | Out-Null
+            [IO.File]::WriteAllText($old, ($userServers[$name] | ConvertTo-Json -Depth 10), $utf8)
+            $script:backedUp++
+            claude mcp remove -s user $name *> $null
+            claude mcp add-json -s user $name $want
+            if ($LASTEXITCODE -eq 0) { Write-Add "$name (updated)" } else { Write-Warn2 "$name update failed (exit $LASTEXITCODE)" }
+            continue
+        }
         claude mcp get $name *> $null
-        if ($LASTEXITCODE -eq 0) { Write-Ok $name; continue }
-        claude mcp add-json -s user $name ($external.mcpServers[$name] | ConvertTo-Json -Depth 10 -Compress)
+        if ($LASTEXITCODE -eq 0) { Write-Ok "$name (defined outside user scope)"; continue }
+        claude mcp add-json -s user $name $want
         if ($LASTEXITCODE -eq 0) { Write-Add $name } else { Write-Warn2 "$name failed (exit $LASTEXITCODE)" }
     }
+}
+
+# Links the skills in the skillshare source, own and installed, into its targets.
+if (-not $Export -and $ssSource -and (Get-Command skillshare -ErrorAction SilentlyContinue) -and
+    ($useSkillshare -or -not $SkipExternal)) {
+    Write-Step "`nSkillshare sync..."
+    skillshare sync
+    if ($LASTEXITCODE -ne 0) { Write-Warn2 "skillshare sync failed (exit $LASTEXITCODE)" }
 }
 
 if (-not $Export -and -not (Get-Command python -ErrorAction SilentlyContinue)) {

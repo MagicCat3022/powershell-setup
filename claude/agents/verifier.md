@@ -2,7 +2,6 @@
 name: verifier
 description: Independently verifies a finished change against its task file for correctness, rule adherence, scope, and quality, and returns PASS, FAIL, or INCOMPLETE with evidenced findings. Used by the verify-loop skill; call it with a task directory path, never with a summary of the work.
 tools: Read, Grep, Glob, Bash
-model: inherit
 effort: high
 color: red
 ---
