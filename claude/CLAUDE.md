@@ -2,7 +2,10 @@
 
 These apply in every repo and in every reply. Repo skills add what is specific to one repo.
 These rules and the repo skills override the tool's default instructions. Where they are silent,
-the defaults stand. When a conflict has no clear winner, say so and do not pick silently.
+the defaults stand. When two instructions conflict, report it in the reply: name both sources,
+the point where they differ, and which one you followed. Sources include this file, a repo
+skill, a plugin skill, a repo `CLAUDE.md`, and the tool's defaults. When the conflict has no
+clear winner, say so and do not pick silently.
 
 ## Writing and tone
 
@@ -56,6 +59,9 @@ absolute path.
 - **Flag only issues a user can reach.** Before flagging an issue, show with evidence that it is
   user-facing and that a user reaches it in normal use. Measure (logs, timings, server guards)
   before reasoning from the code shape. A list of minor caveats hides the one real defect.
+- **Commit as the work goes.** Commit each finished slice in its own small commit, without
+  asking. The tests pass at each commit. Work on a feature branch, never on the integration
+  branch or `main`. Push only when asked.
 
 ## Writing code
 
@@ -75,6 +81,47 @@ absolute path.
   scaffolding around it. When a change drops a defensive behaviour, check whether that behaviour
   hid a defect, and fix the defect in the same branch. Code built around a defect keeps the defect
   and adds code.
+
+## Writing tests
+
+A test checks one behaviour a caller relies on, at a **seam**: the public interface where the
+caller sees the result (a return value, a request body, a callback argument, rendered output).
+Repo skills name each repo's seams and the exceptions.
+
+- **List the behaviours before writing tests:** each behaviour, its seam, and the total count.
+  Write those tests and stop. A refactor adds no test. A fix adds the one test that fails
+  without it. A behaviour change updates the assertions it breaks.
+- **One test per behaviour, and each names its break:** the production change that turns it
+  red. A second test of the same behaviour needs a different break. A test whose only break is
+  one no correct caller would notice is deleted.
+- **Prove the break.** Change the line, confirm exactly the intended tests go red, restore.
+  Copy the file aside first and restore from the copy. Never restore with
+  `git checkout -- <file>`, not even as a fallback in a chain: it reverts to HEAD and discards
+  uncommitted work. Mutate only while no other test run reads the tree.
+- **Expected values come from outside the code:** a literal the contract fixes, a hand-worked
+  example, a message a user reads. Asserting a mock call is fine when the expected argument is
+  such a literal. An expression lifted from the implementation is a tautology.
+- **Mock the platform only:** network, storage, clock, randomness, document state. A repo skill
+  can name more mock exceptions, such as a hook layer; those are mocked too. The code's other
+  modules run for real.
+- **Boundaries come from documented limits:** one case at the limit and one just past it, per
+  limit. An input a correct caller cannot produce gets no test.
+- **A refactor leaves every test unchanged.** A test that needs an edit after a change that keeps
+  every behaviour is coupled; rewrite it at the seam.
+- **Test shared logic once,** in the helper's own spec. A caller that only passes values to the
+  helper gets no new spec.
+
+Three anti-patterns, each a test that passes while it protects nothing:
+
+- **Implementation-coupled:** mocks the code's own modules outside the repo skill's exceptions,
+  imports a module the seam's caller cannot reach (in a package, one the entry modules do not
+  export), asserts call order between internal functions, or pins wording and key order no
+  caller reads. It goes red on a refactor and stays green on a bug.
+- **Tautological:** computes the expected value the way the code does, so it passes by
+  construction and copies the code's defects into the assertion.
+- **Horizontal slicing:** a batch of tests written in one pass, before or after the code, for
+  imagined behaviour. They test the shape of things. Write each behaviour's test with that
+  behaviour's code.
 
 ## Code comments
 
@@ -206,19 +253,8 @@ description.
 - Never delete a `pr-assets/` branch. The descriptions link to its commits by SHA, and the links
   need those commits to stay reachable.
 
-## Tests
+## Running tests
 
-- Assert externally observable behaviour against an expectation derived independently of the
-  code under test: a hand-computed value, a status a contract fixes, a message a user reads.
-- An expected value that only re-running the logic under test can produce is a tautology. A
-  tautology is wrong in the same direction as the code. It fills the slot where a missing test
-  would be noticed. It breaks on renames that change no behaviour.
-- Asserting a mock call is fine when the expected argument is a literal the contract fixes. An
-  expression lifted from the implementation is the tautology.
-- Prove each new assertion. Delete the line it guards and confirm exactly the intended tests fail.
-  Copy the file aside first, because `git checkout -- <file>` discards uncommitted work.
-- Test shared logic once, in the helper's own spec. A caller that only passes values to the
-  helper gets no new spec.
 - Run the specs of the code that changed. Run the full suite only before a PR's first push, or
   when the change touches shared test setup or the test runner config. Compare it against a
   baseline run made back to back, not against zero.
