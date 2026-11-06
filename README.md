@@ -77,6 +77,8 @@ starship/starship.toml   prompt config (loaded via $env:STARSHIP_CONFIG)
 modules/posh-git/1.1.0/  posh-git 1.1.0 with local patches
 install-claude.ps1       installs or exports the Claude Code setup
 claude/                  the Claude Code setup (see "Claude Code" below)
+install-omp.ps1          installs or exports the Oh My Pi setup
+omp/                     the Oh My Pi setup (see "Oh My Pi" below)
 ```
 
 Machine-specific settings deliberately stay **out** of this repo and remain in
@@ -212,8 +214,8 @@ feedback memories. Nothing in it names a company, a repo, or a host.
 |---|---|
 | `CLAUDE.md`, `settings.json`, `statusline-command.ps1`, `hooks/`, `agents/` | `~/.claude` |
 | `skills/<name>/` | `~/.claude/skills`. Export takes every real folder there except `synced` and dot-folders. |
-| `memory/` | the `~/Work` project memory. Export takes the `type: feedback` memories. Install adds index lines to `MEMORY.md` by file name. |
-| `repo-settings/<repo>/` | `~/Work/<repo>/.claude/settings.local.json`, for repos that are cloned. Export creates one for each repo with local settings. |
+| `memory/` | the work folder's project memory. Export takes the `type: feedback` memories. Install adds index lines to `MEMORY.md` by file name. |
+| `repo-settings/<repo>/` | `<work folder>/<repo>/.claude/settings.local.json`, for repos that are cloned. Export creates one for each repo with local settings. |
 | `external.json` | skills-CLI skills and user MCP servers, installed by name |
 
 - Install installs the plugins set to `true` in `enabledPlugins` in `settings.json`,
@@ -223,7 +225,14 @@ feedback memories. Nothing in it names a company, a repo, or a host.
 - Export mirrors the machine. A skill, agent, or memory deleted locally is
   deleted from `claude/`.
 - Home paths are stored as `{{HOME}}` (`C:/Users/<name>`) and `{{HOME_JSON}}`
-  (`C:\\Users\\<name>`).
+  (`C:\\Users\\<name>`), and the work folder as `{{WORK}}`.
+- The work folder is `~/Work` when it exists, else `~/Documents/Github`. Pass
+  `-WorkDir` to choose another.
+- `-SkipSettings` leaves `settings.json` alone on the machine and in the repo,
+  for a machine that keeps its own settings. Install then installs the plugins
+  that machine's `settings.json` enables.
+- `-SkipClaudeMd` leaves `CLAUDE.md` alone on the machine and in the repo, for a
+  machine that keeps its own global rules.
 - Prerequisites: Claude Code (`claude`), Node.js (`npx`, for skills-CLI skills),
   and Python (for the git push guard hook).
 - To test an install without touching the live setup, run
@@ -234,15 +243,85 @@ On a machine whose `~/.claude` holds company-specific rules or skills:
 - Export copies them into `claude/`, company content included. Run export only
   on a machine with the generic setup, and review the diff before committing.
 - Install replaces that machine's `CLAUDE.md` and `settings.json` with the
-  generic ones. The originals go to the backup folder. Skills with other names
-  stay.
+  generic ones, unless `-SkipClaudeMd` and `-SkipSettings` keep them. The
+  originals go to the backup folder. Skills with other names stay.
 
 Not included: credentials, `~/.claude.json` (session state), the skills synced
 from claude.ai (they follow the account), and project and reference memories
 (ticket state).
 
 The semantic search section of `CLAUDE.md` uses a CocoIndex project at
-`~/Work/code-index`, which lives outside this repo.
+`<work folder>/code-index`, which lives outside this repo. Machines without one
+skip that section.
+
+## Oh My Pi
+
+`omp/` holds the [Oh My Pi](https://omp.sh) (`omp`) setup: `config.yml` (model
+roles, settings, status line), the `claude-code` theme, and three extensions:
+`statusline.ts` draws a colored line under the status bar with the shortened
+path, the context used and where auto-compaction fires, and the remaining
+Claude/Codex quota. omp keeps extension colors only on that line, so
+`config.yml` sets `statusLine.showHookStatus: true` and leaves `status` out of
+the segments. `git-push-guard.ts` asks before a risky `git push`, and
+`approval-bell.ts` rings the terminal bell when a tool call waits for approval;
+both ring the same bell omp uses when a turn ends. `install-omp.ps1` copies it in
+either direction.
+
+```powershell
+.\install-claude.ps1        # first: omp reads the Claude Code setup
+.\install-omp.ps1           # repo -> this machine
+.\install-omp.ps1 -Export   # this machine -> repo
+```
+
+| | |
+|---|---|
+| `config.yml` | `~/.omp/agent/config.yml` |
+| `themes/`, `extensions/` | `~/.omp/agent/themes`, `~/.omp/agent/extensions` |
+| `claude/agents/*.md` | `~/.omp/agent/agents`, rewritten as omp task agents |
+
+omp uses the Claude Code setup in `~/.claude` too. `config.yml` sets
+`enabledProviders: [claude]` and `skills.enableClaudeUser: true`, so omp loads:
+
+- `~/.claude/CLAUDE.md` as the global rules, while `~/.omp/agent/AGENTS.md` does
+  not exist (that file would replace it);
+- the skills in `~/.claude/skills`;
+- the Claude Code plugins: their skills, agents, and commands (as
+  `/<plugin>:<command>`);
+- the user MCP servers in `~/.claude.json`. An OAuth server such as `atlassian`
+  needs its own sign-in: `/mcp reauth <name>`. omp drops the `playwright`
+  server, because its built-in browser covers it.
+
+Two pieces need an omp form:
+
+- **Agents.** omp skips `~/.claude/agents`, whose frontmatter differs. Install
+  writes each agent in `claude/agents` to `~/.omp/agent/agents`: `model:
+  inherit` and `color` are dropped, `effort` becomes `thinking-level`, and tool
+  names are lowercased.
+- **The git push guard.** omp cannot run Claude Code's command hooks.
+  `git-push-guard.ts` sends each bash command that mentions `push` to
+  `~/.claude/hooks/guard_git_push.py` and shows a confirm dialog when the
+  script flags it. Without a UI, as in a subagent or `omp -p`, a flagged push
+  is blocked.
+
+Install also:
+
+- installs omp with `irm https://omp.sh/install.ps1 | iex` when `omp` is missing;
+- downloads the local model that `modelRoles.tiny` names (`local/<key>`);
+- sets `"bellStyle": ["audible", "taskbar"]` in the Windows Terminal profile
+  defaults, so a background tab chimes and flashes when omp finishes or asks.
+  Run `install.ps1` first: its font step only patches empty profile defaults.
+
+- Install never deletes. It copies each file it changes to
+  `~/.omp/agent/backups/powershell-setup-<timestamp>/` first.
+- Export mirrors the machine. A theme or extension deleted locally is deleted
+  from `omp/`. Export leaves agents alone, since `claude/agents` holds them.
+- To test an install without touching the live setup, run
+  `.\install-omp.ps1 -AgentDir <empty folder> -SkipExternal`.
+
+After install, sign in with `/login` for each provider `modelRoles` uses
+(Anthropic and OpenAI Codex).
+
+Not included: credentials (`agent.db`), sessions, and Mnemopi memories.
 
 ## Keyboard
 

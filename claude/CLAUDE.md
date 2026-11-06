@@ -272,21 +272,21 @@ Name each change at the end of the reply.
 - Work in the repo's main checkout. It can be on any branch.
 - Create a worktree only when the task needs a second checkout, such as a base build beside the
   branch, or a branch while the main checkout holds other uncommitted work. It goes in
-  `~/Work/worktrees/<repo>/<KEY>`, named by the ticket key. A skill's throwaway review worktree
+  `{{WORK}}/worktrees/<repo>/<KEY>`, named by the ticket key. A skill's throwaway review worktree
   stays in the session scratchpad.
-- A document for a ticket goes in `~/Work/docs/<KEY>_<slug>/`, such as
+- A document for a ticket goes in `{{WORK}}/docs/<KEY>_<slug>/`, such as
   `docs/ABC-123_extend_timeout`.
-- Create no other folder in the `~/Work` root.
+- Create no other folder in the `{{WORK}}` root.
 
 ### Semantic code search
 
-A CocoIndex project at `~/Work/code-index` holds a vector index over the work repos. Use it to
-find where a behaviour lives, the existing pattern before writing a new one, or how another repo
-handles the same concern. Use grep for an exact symbol, file name, or string.
+When `{{WORK}}/code-index` exists, it is a CocoIndex project holding a vector index over the work
+repos. Use it to find where a behaviour lives, the existing pattern before writing a new one, or
+how another repo handles the same concern. Use grep for an exact symbol, file name, or string.
 
 ```bash
-cd ~/Work/code-index && uv run cocoindex update main.py      # refresh before the first search of a task
-cd ~/Work/code-index && uv run python search.py "where is the SSO redirect handled" --repo <repo> -k 10
+cd {{WORK}}/code-index && uv run cocoindex update main.py      # refresh before the first search of a task
+cd {{WORK}}/code-index && uv run python search.py "where is the SSO redirect handled" --repo <repo> -k 10
 ```
 
 Drop `--repo` to search every repo; `--full` prints whole chunks. Each hit prints a score,

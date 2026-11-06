@@ -1,0 +1,134 @@
+shellPath: C:\Program Files\Git\bin\bash.exe
+modelRoles:
+  default: anthropic/claude-opus-5-5
+  smol: openai-codex/gpt-6.1-terra:auto
+  tiny: local/lfm2.5-230m
+  memory: openai-codex/gpt-6-luna:auto
+  judge: openai-codex/gpt-6-luna
+  advisor: openai-codex/gpt-6.1-sol:xhigh
+  Codex: openai-codex/gpt-6.1-sol
+symbolPreset: nerd
+composer:
+  shape: claude
+  tokenRate: false
+  predictions: true
+theme:
+  dark: claude-code
+setupVersion: 2
+statusLine:
+  preset: custom
+  contextLine: annotated
+  transparent: false
+  compactThinkingLevel: true
+  rightSegments:
+    - session_name
+  segmentOptions:
+    model:
+      showThinkingLevel: true
+    path:
+      abbreviate: true
+      maxLength: 30
+      stripWorkPrefix: true
+  leftSegments:
+    - pi
+    - vim
+    - model
+    - mode
+    - collab
+    - stream
+    - git
+    - pr
+  showHookStatus: true
+  sessionAccent: false
+tui:
+  completeScrollback: false
+  hyperlinks: auto
+terminal:
+  showProgress: true
+interruptMode: immediate
+doubleEscapeAction: rewind
+treeFilterMode: default
+compaction:
+  handoffSaveToDisk: true
+  idleEnabled: true
+  modelThresholds:
+    anthropic/claude-opus-5-5: f375000
+    anthropic/claude-opus-5*: f300000
+    anthropic/claude-sonnet-5*: f300000
+    anthropic/claude-fable-*: f300000
+    anthropic/claude-mythos-*: f300000
+  idleTimeoutSeconds: 2700
+ttsr:
+  contextMode: discard
+  repeatMode: once
+memory:
+  backend: mnemopi
+autolearn:
+  enabled: true
+  autoContinue: true
+mnemopi:
+  scoping: per-project-tagged
+  polyphonicRecall: true
+  proactiveLinking: true
+computer:
+  enabled: true
+github:
+  enabled: true
+vault:
+  enabled: false
+checkpoint:
+  enabled: false
+browser:
+  relay: false
+plan:
+  autosave: true
+title:
+  refreshAfterPrompts: 10
+task:
+  enableEffort: true
+  isolation:
+    enabled: true
+  enableLsp: true
+  disabledAgents:
+    - codex-rescue
+providers:
+  cacheWarming: streaming
+advisor:
+  enabled: true
+  syncBacklog: "1"
+lsp:
+  diagnosticsOnEdit: true
+claudeResets:
+  autoRedeem: "no"
+codexResets:
+  autoRedeem: "no"
+retry:
+  fallbackChains:
+    advisor:
+      - anthropic/claude-opus-5-5:high
+cycleOrder:
+  - smol
+  - default
+  - Codex
+secrets:
+  enabled: true
+bash:
+  gitGuard: true
+error:
+  notify: "on"
+enabledProviders:
+  - claude
+skills:
+  enableClaudeUser: true
+disabledExtensions:
+  - skill:codex-cli-runtime
+  - skill:codex-result-handling
+  - skill:gpt-5-4-prompting
+  - slash-command:codex:adversarial-review
+  - slash-command:codex:cancel
+  - slash-command:codex:rescue
+  - slash-command:codex:result
+  - slash-command:codex:review
+  - slash-command:codex:setup
+  - slash-command:codex:status
+  - slash-command:codex:transfer

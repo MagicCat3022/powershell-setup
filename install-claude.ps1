@@ -29,8 +29,9 @@
     deleted from the repo, and git keeps its history.
 
     Home paths are stored as {{HOME}} (C:/Users/<name>) and {{HOME_JSON}}
-    (C:\\Users\\<name>, as JSON escapes it), so the stored files are the same
-    on every machine.
+    (C:\\Users\\<name>, as JSON escapes it), and the work folder as {{WORK}}
+    (~/Work, or the -WorkDir path written from ~), so the stored files are the
+    same on every machine.
 
 .PARAMETER Export
     Copy from this machine into the repo.
@@ -41,7 +42,16 @@
 
 .PARAMETER WorkDir
     The folder that holds the work repos. Its path decides which project
-    memory the feedback memories belong to.
+    memory the feedback memories belong to, and replaces {{WORK}} in the
+    stored files. Defaults to ~\Work when it exists, else ~\Documents\Github.
+
+.PARAMETER SkipSettings
+    Leave settings.json alone, on the machine and in the repo. Step 4 then
+    installs the plugins enabled in the machine's settings.json.
+
+.PARAMETER SkipClaudeMd
+    Leave CLAUDE.md alone, on the machine and in the repo, for a machine that
+    keeps its own global rules.
 
 .PARAMETER SkipExternal
     Skip step 4. Plugins, skills-CLI skills, and MCP servers always install
@@ -51,7 +61,10 @@
 param(
     [switch]$Export,
     [string]$ClaudeDir = (Join-Path $HOME '.claude'),
-    [string]$WorkDir   = (Join-Path $HOME 'Work'),
+    [string]$WorkDir   = $(if (Test-Path -LiteralPath (Join-Path $HOME 'Work')) { Join-Path $HOME 'Work' }
+                           else { Join-Path $HOME 'Documents\Github' }),
+    [switch]$SkipSettings,
+    [switch]$SkipClaudeMd,
     [switch]$SkipExternal
 )
 
@@ -67,6 +80,14 @@ function Write-Warn2($msg) { Write-Host "  [warn]  $msg" -ForegroundColor Yellow
 
 $homeFwd    = $HOME.Replace('\', '/')
 $homeJson   = $HOME.Replace('\', '\\')
+# The work folder as CLAUDE.md writes it: ~/Work, or an absolute path outside ~.
+$workText   = if ($WorkDir.StartsWith("$HOME\", 'OrdinalIgnoreCase')) {
+    '~/' + [IO.Path]::GetRelativePath($HOME, $WorkDir).Replace('\', '/')
+} else {
+    $WorkDir.Replace('\', '/')
+}
+# Matches the work folder only as a whole path, so ~/Work never matches inside ~/Workshop.
+$workPattern = [regex]::Escape($workText) + '(?![A-Za-z0-9_-])'
 $textExt    = '.md', '.json', '.ps1', '.py', '.js', '.ts', '.txt', '.yml', '.yaml', '.toml', '.sh'
 $utf8       = [Text.UTF8Encoding]::new($false)
 $backupRoot = Join-Path $ClaudeDir "backups\powershell-setup-$(Get-Date -Format yyyyMMdd-HHmmss)"
@@ -90,15 +111,15 @@ if (-not $Export -and -not (Test-Path -LiteralPath $store)) {
 # ── helpers ─────────────────────────────────────────────────────────────────
 
 function Convert-Content([byte[]]$bytes) {
-    # Swaps home paths for tokens on export and back on install. A file with
-    # nothing to swap is returned byte for byte, so encoding is never touched.
+    # Swaps home and work paths for tokens on export and back on install. A file
+    # with nothing to swap is returned byte for byte, so encoding is never touched.
     $bom    = $bytes.Length -ge 3 -and $bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF
     $offset = if ($bom) { 3 } else { 0 }
     $text   = $utf8.GetString($bytes, $offset, $bytes.Length - $offset)
     $new    = if ($Export) {
-        $text.Replace($homeJson, '{{HOME_JSON}}').Replace($homeFwd, '{{HOME}}')
+        ($text -creplace $workPattern, '{{WORK}}').Replace($homeJson, '{{HOME_JSON}}').Replace($homeFwd, '{{HOME}}')
     } else {
-        $text.Replace('{{HOME_JSON}}', $homeJson).Replace('{{HOME}}', $homeFwd)
+        $text.Replace('{{WORK}}', $workText).Replace('{{HOME_JSON}}', $homeJson).Replace('{{HOME}}', $homeFwd)
     }
     if ($new -ceq $text) { return ,$bytes }
     $out = $utf8.GetBytes($new)
@@ -206,7 +227,10 @@ function Sync-Folders([string]$machineRoot, [string]$storeRoot, [string[]]$names
 # ── 1. core files, hooks, agents, skills ────────────────────────────────────
 Write-Step 'Core files...'
 
-foreach ($name in 'CLAUDE.md', 'settings.json', 'statusline-command.ps1') {
+$coreFiles = 'CLAUDE.md', 'settings.json', 'statusline-command.ps1' | Where-Object {
+    -not ($SkipSettings -and $_ -eq 'settings.json') -and -not ($SkipClaudeMd -and $_ -eq 'CLAUDE.md')
+}
+foreach ($name in $coreFiles) {
     $m = Join-Path $ClaudeDir $name
     $s = Join-Path $store $name
     $src, $dst = if ($Export) { $m, $s } else { $s, $m }
@@ -223,13 +247,19 @@ foreach ($name in 'hooks', 'agents') {
 
 Write-Step "`nSkills..."
 
-# Own skills are the real folders in skills\. Links come from the skills CLI
-# and reinstall through external.json; synced\ follows the claude.ai account.
+# Own skills are the real folders in skills\. Skills-CLI skills, linked or
+# copied, are listed in its lock file and reinstall through external.json;
+# synced\ follows the claude.ai account.
+$lockFile = Join-Path $HOME '.agents\.skill-lock.json'
+$cliSkills = if (Test-Path -LiteralPath $lockFile) {
+    @((Get-Content -LiteralPath $lockFile -Raw | ConvertFrom-Json -AsHashtable).skills.Keys)
+} else { @() }
 $skillNames = if ($Export) {
     Get-ChildItem -LiteralPath (Join-Path $ClaudeDir 'skills') -Directory -Force |
         Where-Object {
             -not ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
-            $_.Name -ne 'synced' -and -not $_.Name.StartsWith('.')
+            $_.Name -ne 'synced' -and -not $_.Name.StartsWith('.') -and
+            $cliSkills -notcontains $_.Name
         } |
         ForEach-Object Name
 } else {
@@ -332,7 +362,6 @@ $externalFile = Join-Path $store 'external.json'
 
 if ($Export) {
     Write-Step "`nExternal list..."
-    $lockFile = Join-Path $HOME '.agents\.skill-lock.json'
     $skillsCli = @()
     if (Test-Path -LiteralPath $lockFile) {
         $lock = Get-Content -LiteralPath $lockFile -Raw | ConvertFrom-Json -AsHashtable
