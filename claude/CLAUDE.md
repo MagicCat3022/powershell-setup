@@ -9,8 +9,9 @@ clear winner, say so and do not pick silently.
 
 ## Writing and tone
 
-Applies to replies, code comments, commit messages, PR descriptions, review findings, docs, and
-test names.
+Applies to all text a person reads: replies, HTML and Markdown docs, UI text (labels, messages,
+tooltips, errors), code comments, commit messages, PR descriptions, tickets, review findings,
+and test names.
 
 - **No litotes.** Never affirm something by negating its opposite. Write "a serious problem",
   not "not a small problem"; "correct", not "not wrong"; "slow" or the number, not "not exactly
@@ -20,7 +21,19 @@ test names.
   understatement ("which went about as well as expected", "surprisingly, it worked"). Report the
   outcome plainly.
 - **Simplified technical English.** Short declarative sentences, present tense, plain words, one
-  fact per sentence.
+  fact per sentence, the most important point first. Delete a sentence that gives the reader no
+  new fact.
+- **Actor and verb.** The person or thing that acts is the subject, and its action is the verb:
+  "Declan merged the change on 2 Oct." An action turned into a noun ("a request was made") or a
+  passive verb becomes an actor doing a verb. A passive verb stays only when the actor is
+  unknown.
+- **Spoken words.** A stack of three or more nouns, or a phrase you coined, becomes a short
+  clause with a verb: "the filter drops a block shorter than the minimum".
+- **Check prose with the `plain-writing` and `unslop` skills** before you send or save any text
+  a person reads, from the list above. `plain-writing` holds examples for these rules and the
+  rhetorical tics to rewrite. `unslop` (pstack) lists AI tells: em dashes, stock vocabulary,
+  filler, and hedging. Where `unslop` differs from this file, this file wins: a passive verb
+  stays only when the actor is unknown.
 
 The reader of a log, a diff, or a review thread has no tone of voice to decode, and a negated
 claim about correctness is exactly the sentence a reviewer must not misread.
@@ -28,14 +41,16 @@ claim about correctness is exactly the sentence a reviewer must not misread.
 ## File links in replies
 
 In a chat reply, every mention of a file or folder path is a markdown link that opens it in VS
-Code. The visible text stays short and readable; the target is a `vscode://` URL built from the
-absolute path.
+Code, or in the browser for an HTML file. The visible text stays short and readable; the target
+is a URL built from the absolute path.
 
 - **Windows files:** `vscode://file/{{HOME}}/Documents/Github/repo/src/app.ts`. Forward
   slashes, drive letter kept.
 - **WSL files:** `vscode://vscode-remote/wsl+Ubuntu/home/magic/Github/repo/src/app.ts`.
 - **A line or column:** append `:<line>` or `:<line>:<column>` to the URL, and show the line in
   the text: [src/app.ts:42](vscode://file/{{HOME}}/Documents/Github/repo/src/app.ts:42).
+- **HTML files:** `file:///{{HOME}}/Documents/Github/repo/docs/index.html`, so the file opens
+  in the default browser. No `:<line>` suffix, because the browser cannot resolve one.
 - **Link text:** the repo-relative path, or the file name when the repo is clear. Never the full
   URL.
 - **Special characters:** percent-encode spaces as `%20`, and `#`, `?`, `(`, `)` too, so the
