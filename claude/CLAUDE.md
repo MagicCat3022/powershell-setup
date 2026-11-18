@@ -13,13 +13,6 @@ Applies to all text a person reads: replies, HTML and Markdown docs, UI text (la
 tooltips, errors), code comments, commit messages, PR descriptions, tickets, review findings,
 and test names.
 
-- **No litotes.** Never affirm something by negating its opposite. Write "a serious problem",
-  not "not a small problem"; "correct", not "not wrong"; "slow" or the number, not "not exactly
-  fast". A plain factual negation is fine: "the dialog does not close on Escape" states what
-  happens.
-- **No irony.** No saying the opposite of what is meant, no wry asides, no knowing
-  understatement ("which went about as well as expected", "surprisingly, it worked"). Report the
-  outcome plainly.
 - **Simplified technical English.** Short declarative sentences, present tense, plain words, one
   fact per sentence, the most important point first. Delete a sentence that gives the reader no
   new fact.
@@ -27,16 +20,6 @@ and test names.
   "Declan merged the change on 2 Oct." An action turned into a noun ("a request was made") or a
   passive verb becomes an actor doing a verb. A passive verb stays only when the actor is
   unknown.
-- **Spoken words.** A stack of three or more nouns, or a phrase you coined, becomes a short
-  clause with a verb: "the filter drops a block shorter than the minimum".
-- **Check prose with the `plain-writing` and `unslop` skills** before you send or save any text
-  a person reads, from the list above. `plain-writing` holds examples for these rules and the
-  rhetorical tics to rewrite. `unslop` (pstack) lists AI tells: em dashes, stock vocabulary,
-  filler, and hedging. Where `unslop` differs from this file, this file wins: a passive verb
-  stays only when the actor is unknown.
-
-The reader of a log, a diff, or a review thread has no tone of voice to decode, and a negated
-claim about correctness is exactly the sentence a reviewer must not misread.
 
 ## File links in replies
 
@@ -250,7 +233,8 @@ ticket, and CI, and never saw the conversation.
 
 **Fill in the repo's PR template under `.github/`.** Never invent a heading or add a section it
 does not have. Replace the ticket hint with the ticket as a markdown link on the key. Tick only
-the boxes that are true.
+the boxes that are true. The template and these rules override the `pr` skill's sections
+(Summary, Evidence, Merge Danger). That is settled, so do not report it as a conflict.
 
 **Show every change to rendered UI with screenshots** in the description: before and after for a
 changed state, after alone for a new one. Give each image a bold caption and alt text that names
