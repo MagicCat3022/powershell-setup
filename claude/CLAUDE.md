@@ -317,6 +317,11 @@ description.
 
 - Each repo's conventions come from its conventions skill or its `CLAUDE.md`. Apply them on every
   coding task in that repo, whether or not the request mentions conventions.
+- Read a repo's `CLAUDE.md` before your first task in that repo that depends on its conventions:
+  an edit, a review, a plan, a commit, a PR description, or a test run. A session that starts in
+  a parent folder does not load it on its own. Read the whole file, in ranges when it is long. A
+  brief for a subagent that works in the repo names the file and tells the subagent to read it
+  first. A lookup that only finds where code lives needs no read.
 - Some repos merge feature branches into an integration branch, such as `dev`, and `main`
   receives only merges from it. There, a feature branch starts from and rebases onto a freshly
   fetched `origin/<integration>`, and its PR targets that branch. When asked to rebase onto
