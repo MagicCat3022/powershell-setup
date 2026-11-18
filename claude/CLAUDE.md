@@ -44,6 +44,11 @@ is a URL built from the absolute path.
 
 ## Working
 
+- **Question the plan before non-trivial work.** Check the goal and the approach, not only the
+  details. When a simpler path exists, or one that avoids a failure you can name, say so before
+  you start, as a numbered question: "Q3: Are you sure you want X? Y is better because Z." Then
+  wait for the answer. When X holds up, raise nothing: silence means you checked and X is the
+  best path. When the user keeps X, do X and do not raise it again.
 - **Check history before asking.** Before asking why a change exists or who asked for it, look
   it up: `git log` and `git show` on the commit, the PR comments (`gh pr view`,
   `gh api repos/<owner>/<repo>/pulls/<n>/comments`), and earlier session transcripts in
