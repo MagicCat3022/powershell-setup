@@ -77,6 +77,16 @@ is a URL built from the absolute path.
 - **Commit as the work goes.** Commit each finished slice in its own small commit, without
   asking. The tests pass at each commit. Work on a feature branch, never on the integration
   branch or `main`. Push only when asked.
+- **Size checks to the change.** Before a run, probe, or audit that should take more than 10
+  minutes or load the machine, state the estimate and a smaller check, and run the smaller one
+  unless the user asks for more.
+- **Report long waits.** Before waiting on a subagent or a background job, tell the user what it
+  does and how long it should take. When it runs past 10 minutes, end the turn with a status
+  line. Its result arrives on its own and starts the next turn.
+- **Number decision questions.** Label each question that needs the user's call `Q<n>`, in one
+  sequence across the session. Look up a fact the code, a tool, or history can answer instead of
+  asking it.
+- **End an implementation report with the diff stat:** `git diff --stat origin/<base>...HEAD`.
 
 ## Writing code
 
