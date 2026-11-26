@@ -99,9 +99,11 @@ advisor:
 lsp:
   diagnosticsOnEdit: true
 claudeResets:
-  autoRedeem: "no"
+  autoRedeem5h: "no"
+  autoRedeemWeekly: "no"
 codexResets:
-  autoRedeem: "no"
+  autoRedeem5h: "no"
+  autoRedeemWeekly: "no"
 retry:
   fallbackChains:
     advisor:
@@ -113,7 +115,7 @@ cycleOrder:
 secrets:
   enabled: true
 bash:
-  gitGuard: true
+  gitGuard: false
 error:
   notify: "on"
 enabledProviders:
