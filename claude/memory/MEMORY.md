@@ -1,2 +1,4 @@
 - [Small guard rides in the ticket](small-guard-rides-in-ticket.md) — a small guard on the ticket's own flow goes in the ticket commit, no separate bug
 - [Session answers stay out of skills](session-answers-stay-out-of-skills.md) — a decision answer applies to the task; never write it into a skill unasked
+- [Merged PR leaves memory](merged-pr-leaves-memory.md) — once a PR merges, drop its threads, drafted replies, body drafts, tips, CI state; keep decisions and follow-ups
+- [Team files untouched](team-files-untouched.md) — never edit a repo-committed CLAUDE.md or other team agent file; personal rules go in ~/.claude
