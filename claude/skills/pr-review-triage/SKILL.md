@@ -19,8 +19,9 @@ Apply the repo's conventions for fixes, specs, and commits (the Repos section of
   picks the threads to fix.
 - **Verify against the code at the PR head.** A comment describes the code as the reviewer saw
   it, and an outdated thread points at code that has moved or changed.
-- **Nothing goes to GitHub without a yes.** A reply, a resolution, a commit, and a push each need
-  the user's go-ahead in this conversation. By default the user posts the replies.
+- **Nothing goes to GitHub without a yes.** A reply, a resolution, and a push each need the
+  user's go-ahead in this conversation. Push only when the user asks. By default the user posts
+  the replies.
 - **One verdict per finding.** The AI review bot can raise one finding in several threads.
 
 ## 1. Fetch
@@ -90,8 +91,9 @@ numbers ("fix 1, 3, 4") or discusses single threads.
 - Fix only the accepted threads, with the smallest change that removes the failure.
 - Add or update a spec for each behaviour fix. The spec fails without the fix.
 - Run the checks the repo's conventions name for the touched files.
-- Show the change per thread. Commit and push only when the user asks. The commit message
-  follows the repo's rules and lists what changed.
+- Show the change per thread. Commit each fix as `~/.claude/CLAUDE.md` says, without asking.
+  Push only when the user asks. The commit message follows the repo's rules and lists what
+  changed.
 
 ## 6. Replies
 
