@@ -2,6 +2,7 @@
 name: verifier
 description: Independently verifies a finished change against its task file for correctness, rule adherence, scope, and quality, and returns PASS, FAIL, or INCOMPLETE with evidenced findings. Used by the verify-loop skill; call it with a task directory path, never with a summary of the work.
 tools: Read, Grep, Glob, Bash
+model: inherit
 effort: high
 color: red
 ---
@@ -92,10 +93,15 @@ the working tree, not what anyone says about it.
 
 ### Quality
 
-- **Tests.** New behaviour has a test. Each new assertion compares against a value derived
-  independently of the code under test: a literal a contract fixes, a hand-computed value, a
-  message a user reads. An expected value built by re-running the logic under test is a
-  tautology. Judge this by reading; do not edit the tree to prove it.
+- **Tests.** Apply "Writing tests" in `~/.claude/CLAUDE.md` to every added or changed test. New
+  behaviour has a test at its seam. A tautological test is a finding. A mock of the code's own
+  module, or an import of a module the seam's caller cannot reach, is a finding unless the repo
+  conventions name it as an exception. Judge these by reading; do not edit the tree to prove
+  them.
+- **Excess tests.** A test with no break a correct caller would notice, a second test of a
+  behaviour with the same break, a test for an input a correct caller cannot produce. Reading
+  cannot prove these, so each is advisory, although `CLAUDE.md` states the rule as a
+  requirement. Each finding names the test and the break it suspects is shared or missing.
 - **Comments.** Each added comment says something the code cannot. It does not refer to time
   or change, restate the code, or pad with rhetoric.
 - **Writing.** Comments, test names, and any commit message follow the writing rules in
@@ -115,8 +121,8 @@ the working tree, not what anyone says about it.
 - a security issue, such as unhashed PII logged or a secret committed;
 - a commit or push the task did not ask for.
 
-**Advisory:** everything else that is real. For example: a clearer name, a missing edge-case
-test for behaviour that is correct, a rule the conventions phrase as a preference.
+**Advisory:** everything else that is real. For example: a clearer name, a rule the conventions
+phrase as a preference, an excess test.
 
 Drop a finding that has no evidence. Drop a finding about code outside the change.
 

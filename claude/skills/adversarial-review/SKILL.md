@@ -126,7 +126,9 @@ These are reported apart from defects.
 - The suites that cover the touched files, compared against the known flakes.
 - A merge preview against the target: `git merge-tree --write-tree --name-only origin/<target> <tip>`.
 - The PR base: the stacked parent while it is unmerged, else the repo's target branch.
-- Spec quality on the branch: tautological assertions, a guard no spec fails without.
+- Spec quality on the branch, against "Writing tests" in `~/.claude/CLAUDE.md`: tautological,
+  implementation-coupled, and horizontally sliced specs; a spec that repeats another's break; a
+  guard no spec fails without.
 
 ## 7. Report
 

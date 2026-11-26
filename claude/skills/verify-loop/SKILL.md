@@ -100,6 +100,9 @@ about each.
   verifier could not run.
 - **FAIL:** fix every blocking finding, then go to step 4.
   - Fix advisory findings only when they are in scope and cheap. List the rest in the report.
+  - Delete a test the verifier flags as excess only after a run shows another test catches its
+    break: make the change the flagged test guards, and confirm another test goes red. Follow
+    "Prove the break" in `~/.claude/CLAUDE.md`. List every unproven excess finding in the report.
   - When you judge a blocking finding wrong, do not fix it and do not argue with the verifier.
     Mark it `disputed` in `rounds.md` with the evidence, and stop the loop at the end of the
     round. The user decides.
