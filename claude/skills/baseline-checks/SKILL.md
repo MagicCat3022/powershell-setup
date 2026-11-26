@@ -5,9 +5,9 @@ description: How to scope test runs and compare lint, type check, and test resul
 
 # Baseline checks
 
-- Run the specs of the code that changed. Run the full suite only before a PR's first push, or
-  when the change touches shared test setup or the test runner config. Compare it against a
-  baseline run made back to back, not against zero.
+- Run the full suite only before a PR's first push, or when the change touches shared test setup
+  or the test runner config. Compare it against a baseline run made back to back, not against
+  zero.
 - When lint or the type check is red at baseline, its exit code carries no signal. Capture the
   findings before the first edit and compare finding sets: the sorted type errors, and the
   `(file, rule, severity)` multiset for lint. Matching counts can hide a swap.

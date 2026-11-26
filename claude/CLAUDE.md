@@ -199,8 +199,8 @@ any repo. A subagent brief for that work names the skill.
 
 - Before a rebase, a history rewrite, a stacked branch or PR, or a merge preview, read the
   `git-history` skill.
-- Before a full suite run, or when lint or the type check is red before your change, read the
-  `baseline-checks` skill.
+- Before a full suite run, when lint or the type check is red before your change, or when you
+  need a file's before state, read the `baseline-checks` skill.
 
 ## Repos
 
