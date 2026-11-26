@@ -63,7 +63,8 @@ is a URL built from the absolute path.
   user-facing and that a user reaches it in normal use. Measure (logs, timings, server guards)
   before reasoning from the code shape. A list of minor caveats hides the one real defect.
 - **Commit as the work goes.** Commit each finished slice in its own small commit, without
-  asking. The tests pass at each commit. Work on a feature branch, never on the integration
+  asking. Run the tests at the branch head, not at each commit. When a commit in the middle of a
+  branch goes red, a later commit fixes it. Work on a feature branch, never on the integration
   branch or `main`. Push only when asked.
 - **Size checks to the change.** Before a run, probe, or audit that should take more than 10
   minutes or load the machine, state the estimate and a smaller check, and run the smaller one
