@@ -50,9 +50,8 @@ git worktree add --detach <scratchpad>/review-<key> <tip>
 cd <scratchpad>/review-<key> && git apply --whitespace=nowarn <scratchpad>/uncommitted.patch
 ```
 
-Link `node_modules` from the main checkout (the Git section of `~/.claude/CLAUDE.md` gives the
-junction idiom for Windows). Every reproduction spec, lint run, type check, and dev server runs
-here.
+Link `node_modules` from the main checkout (the `git-history` skill gives the junction idiom for
+Windows). Every reproduction spec, lint run, type check, and dev server runs here.
 
 ## 3. Map the attack surface
 

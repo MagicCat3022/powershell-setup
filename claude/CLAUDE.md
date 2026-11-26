@@ -66,9 +66,9 @@ is a URL built from the absolute path.
   asking. Run the tests at the branch head, not at each commit. When a commit in the middle of a
   branch goes red, a later commit fixes it. Work on a feature branch, never on the integration
   branch or `main`. Push only when asked.
-- **Size checks to the change.** Before a run, probe, or audit that should take more than 10
-  minutes or load the machine, state the estimate and a smaller check, and run the smaller one
-  unless the user asks for more.
+- **Size checks to the change.** Run the specs of the changed code. Before a run, probe, or
+  audit that should take more than 10 minutes or load the machine, state the estimate and a
+  smaller check, and run the smaller one unless the user asks for more.
 - **Report long waits.** Before waiting on a subagent or a background job, tell the user what it
   does and how long it should take. When it runs past 10 minutes, end the turn with a status
   line. Its result arrives on its own and starts the next turn.
@@ -195,40 +195,12 @@ Added a route test for rejected event types.
 Before you write or edit a PR description, read the `pr-descriptions` skill whole, every time, in
 any repo. A subagent brief for that work names the skill.
 
-## Running tests
+## Git history and baselines
 
-- Run the specs of the code that changed. Run the full suite only before a PR's first push, or
-  when the change touches shared test setup or the test runner config. Compare it against a
-  baseline run made back to back, not against zero.
-- When lint or the type check is red at baseline, its exit code carries no signal. Capture the
-  findings before the first edit and compare finding sets: the sorted type errors, and the
-  `(file, rule, severity)` multiset for lint. Matching counts can hide a swap.
-- Get a before state with `git show <base>:<file>` or a detached worktree. Never `git stash`.
-
-## Git
-
-- `git fetch origin` before a rebase. A rebase onto a stale ref resolves its conflicts twice.
-- Keep a backup ref (`git branch bak-<name>`) before a rebase or a history rewrite. Delete it once
-  the result is verified.
-- A clean rebase can still be wrong. After a rebase, compare the branch's own commits with
-  `git range-diff <old-base>..<old-tip> <new-base>..<new-tip>` and reconcile any difference.
-- Fix a stacked conflict at the lowest branch that has it. Then move each child with
-  `git rebase --onto <new-parent> <old-parent-tip> <child>`.
-- Open stacked PRs with `gh pr create`: the bottom one into the target branch, each later one
-  into the branch below it. With the `gh stack` extension, link them with
-  `gh stack link --base <target> <bottom-pr> <next-pr>…`. Without `--base`, the stack takes the
-  default branch.
-- Preview a merge without touching the tree:
-  `git merge-tree --write-tree --name-only <branch> <other>`. Exit 0 means clean. Read a conflict
-  with `git show <tree>:<path>`.
-- Duplicate commits under different SHAs cause surprising conflicts. Compare
-  `git show <sha> | git patch-id --stable`; identical ids mean identical content. Rebase onto the
-  branch that already has the content. Do not merge.
-- Verify an intermediate tip by running it. Check it out with
-  `git worktree add --detach <scratch> <sha>`, junction `node_modules` in
-  (`New-Item -ItemType Junction`), and run the specs. Remove the junction with
-  `[System.IO.Directory]::Delete($path, $false)`, which deletes the reparse point without
-  following it.
+- Before a rebase, a history rewrite, a stacked branch or PR, or a merge preview, read the
+  `git-history` skill.
+- Before a full suite run, or when lint or the type check is red before your change, read the
+  `baseline-checks` skill.
 
 ## Repos
 
@@ -251,23 +223,8 @@ any repo. A subagent brief for that work names the skill.
   branch with an explicit destination: `git push -u origin <branch>:refs/heads/<branch>`.
 - Link a ticket as a markdown link on its key, such as
   `[ABC-123](https://<site>.atlassian.net/browse/ABC-123)`.
-
-### Conventions skills
-
-A repo's conventions skill updates itself when the codebase or the user gives a rule it lacks.
-Name each change at the end of the reply.
-
-- **Observed patterns:** only what existing code shows, never an invented rule.
-- **User feedback:** the standard and its reason. Not the exchange, the date, or who said it. An
-  answer that only makes sense for one task stays out of the skill.
-- **Placement:** `SKILL.md` holds the rules most tasks need. A situational rule goes in the
-  matching reference file.
-- **Timeless:** no dates, "as of", or branch and ticket state. Transient state goes to memory.
-- **One place per fact.** When a change makes an entry wrong, fix or delete it. Never append a
-  correction below it. Name code by file and symbol, since line numbers drift.
-- A rule that applies in every repo goes in `~/.claude/CLAUDE.md`.
-- When the user's stated preference contradicts a pattern in the codebase, the user wins. Update
-  the rule and note that the codebase still holds older examples.
+- When the codebase or the user gives a rule a repo's conventions skill lacks, read the
+  `conventions-skills` skill before you add it.
 
 ### Folder layout
 
